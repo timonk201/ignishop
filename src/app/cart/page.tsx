@@ -1,104 +1,94 @@
 'use client';
 
-import { useStore } from '@/store';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCartStore } from '../../store/cartStore';
 
-export default function Cart() {
-  const { cart, removeFromCart, updateCartQuantity } = useStore();
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup'); // "pickup" или "delivery"
+export default function CartPage() {
+  const { cart, updateQuantity, removeFromCart, clearCart } = useCartStore();
+  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
   const [address, setAddress] = useState('');
+  const router = useRouter();
 
-  const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleOrder = () => {
-    // Пока моковая логика, позже подключим API
-    setOrderPlaced(true);
-    setIsCheckoutOpen(false);
-    setAddress('');
-    setDeliveryMethod('pickup');
-    setTimeout(() => setOrderPlaced(false), 3000);
+  const handleOrderSubmit = (e) => {
+    e.preventDefault();
+    const order = {
+      items: cart,
+      total: totalPrice,
+      deliveryMethod,
+      address: deliveryMethod === 'delivery' ? address : null,
+    };
+    console.log('Оформлен заказ:', order);
+    clearCart();
+    alert('Заказ успешно оформлен!');
+    router.push('/');
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Корзина</h1>
+    <div className="container mx-auto p-6">
+      <h2 className="text-3xl font-bold text-[#333333] mb-6">Корзина</h2>
       {cart.length === 0 ? (
-        <p className="text-gray-600">Ваша корзина пуста</p>
+        <p className="text-center text-[#333333] text-lg">Корзина пуста</p>
       ) : (
-        <div className="space-y-4">
-          {cart.map((item) => (
-            <div
-              key={item.product.id}
-              className="flex justify-between items-center border p-4 rounded-lg"
-            >
-              <div className="flex items-center space-x-4">
-                {item.product.image ? (
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    className="w-16 h-16 object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-200 flex items-center justify-center">
-                    Нет фото
+        <>
+          {/* Список товаров в корзине */}
+          <div className="space-y-6 mb-8">
+            {cart.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-center bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              >
+                <div className="flex items-center space-x-4">
+                  {item.image && (
+                    <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-md" />
+                  )}
+                  <div>
+                    <h3 className="font-semibold text-[#333333] text-lg mb-1">{item.name}</h3>
+                    <p className="text-[#FF6200] font-bold text-lg">{item.price} $</p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <label className="text-sm text-gray-600">Количество:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+                        className="w-16 p-1 border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-[#FF6200]"
+                      />
+                    </div>
                   </div>
-                )}
-                <div>
-                  <h2 className="text-xl font-semibold">{item.product.name}</h2>
-                  <p className="text-gray-600">${item.product.price} x {item.quantity}</p>
-                  <p className="text-lg font-bold">
-                    Итого: ${item.product.price * item.quantity}
-                  </p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <p className="text-[#333333] font-semibold">Итого: {item.price * item.quantity} $</p>
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    Удалить
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    updateCartQuantity(item.product.id, Number(e.target.value))
-                  }
-                  className="w-16 p-1 border rounded"
-                />
-                <button
-                  onClick={() => removeFromCart(item.product.id)}
-                  className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 transition"
-                >
-                  Удалить
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="text-right">
-            <p className="text-lg font-bold">Общая сумма: ${total}</p>
-            <button
-              onClick={() => setIsCheckoutOpen(true)}
-              className="mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition"
-            >
-              Оформить заказ
-            </button>
-            {orderPlaced && (
-              <p className="text-green-600 mt-2">Заказ успешно оформлен!</p>
-            )}
+            ))}
           </div>
-        </div>
-      )}
 
-      {/* Модальное окно оформления заказа */}
-      {isCheckoutOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Оформление заказа</h2>
-            <div className="space-y-4">
+          {/* Итоговая сумма */}
+          <div className="bg-white p-4 rounded-lg shadow-md mb-8">
+            <p className="text-2xl font-bold text-[#333333]">
+              Общая сумма: <span className="text-[#FF6200]">{totalPrice} $</span>
+            </p>
+          </div>
+
+          {/* Форма оформления заказа */}
+          <div className="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
+            <h3 className="text-xl font-semibold text-[#333333] mb-4">Оформление заказа</h3>
+            <form onSubmit={handleOrderSubmit} className="space-y-4">
               <div>
-                <label className="block text-gray-700">Способ доставки</label>
+                <label className="block text-sm text-gray-600 mb-1">Способ получения:</label>
                 <select
                   value={deliveryMethod}
                   onChange={(e) => setDeliveryMethod(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-[#FF6200]"
                 >
                   <option value="pickup">Самовывоз</option>
                   <option value="delivery">Доставка</option>
@@ -106,44 +96,25 @@ export default function Cart() {
               </div>
               {deliveryMethod === 'delivery' && (
                 <div>
-                  <label className="block text-gray-700">Адрес доставки</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm text-gray-600 mb-1">Адрес доставки:</label>
+                  <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full p-2 border rounded"
-                    placeholder="Введите адрес"
+                    placeholder="Введите адрес доставки"
+                    className="w-full p-2 border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-[#FF6200]"
                     required
                   />
                 </div>
               )}
-              <div>
-                <p className="text-lg font-bold">Итого: ${total}</p>
-                {deliveryMethod === 'delivery' && (
-                  <p className="text-sm text-gray-600">+ доставка: $5</p>
-                )}
-                <p className="text-lg font-bold">
-                  К оплате: ${deliveryMethod === 'delivery' ? total + 5 : total}
-                </p>
-              </div>
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setIsCheckoutOpen(false)}
-                  className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={handleOrder}
-                  disabled={deliveryMethod === 'delivery' && !address}
-                  className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition disabled:bg-gray-400"
-                >
-                  Подтвердить заказ
-                </button>
-              </div>
-            </div>
+              <button
+                type="submit"
+                className="w-full bg-[#FF6200] text-white py-3 rounded-full hover:bg-[#e65a00] transition-colors text-lg font-semibold"
+              >
+                Оформить заказ
+              </button>
+            </form>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
